@@ -10,5 +10,8 @@ public interface ShoppingCartDao
     void addItem(int userId, int productId, int quantity);
     void updateItem(int userId, int productId, int quantity);
     void removeItem(int userId, int productId);
+    void updateQuantity(int userId, int productId, int quantity);
+    void clearShoppingCart(int userId);
+    void addProduct(int userId, int productId, int i);
     // add additional method signatures here
 }

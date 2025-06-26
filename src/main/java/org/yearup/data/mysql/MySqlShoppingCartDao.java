@@ -54,4 +54,19 @@ public class MySqlShoppingCartDao extends MySqlDaoBase implements ShoppingCartDa
     public void removeItem(int userId, int productId) {
 
     }
+
+    @Override
+    public void updateQuantity(int userId, int productId, int quantity) {
+
+    }
+
+    @Override
+    public void clearShoppingCart(int userId) {
+
+    }
+
+    @Override
+    public void addProduct(int userId, int productId, int i) {
+
+    }
 }
