@@ -8,6 +8,7 @@ import org.springframework.web.server.ResponseStatusException;
 import org.yearup.data.ProductDao;
 import org.yearup.data.ShoppingCartDao;
 import org.yearup.data.UserDao;
+import org.yearup.models.Product;
 import org.yearup.models.ShoppingCart;
 import org.yearup.models.ShoppingCartItem;
 import org.yearup.models.User;
@@ -21,9 +22,9 @@ import java.security.Principal;
 @CrossOrigin(origins = "http://localhost:63342")
 @RestController
 @RequestMapping("/cart")
-@PreAuthorize("isAuthenticated()")
+@PreAuthorize("hasRole('ROLE_USER') or hasRole('ROLE_ADMIN')")
 
-// only logged in users should have access to these actions
+
 public class ShoppingCartController
 {
     // a shopping cart requires
@@ -31,7 +32,6 @@ public class ShoppingCartController
     private UserDao userDao;
     private ProductDao productDao;
 
-    // annotation needed
     @Autowired
     public ShoppingCartController(ShoppingCartDao shoppingCartDao, UserDao userDao, ProductDao productDao){
         this.shoppingCartDao = shoppingCartDao;
@@ -39,8 +39,6 @@ public class ShoppingCartController
         this.productDao = productDao;
     }
 
-    // each method in this controller requires a Principal object as a parameter
-    // GET cart
     @GetMapping
     public ShoppingCart getCart(Principal principal) {
         try {
@@ -55,51 +53,72 @@ public class ShoppingCartController
         }
         catch(Exception e)
         {
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "UNABLE TO RETRIEVE CART", e);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Sowwy :C");
         }
     }
 
-    // add a POST method to add a product to the cart - the url should be
     @PostMapping("/products/{productId}")
     @ResponseStatus(value = HttpStatus.CREATED)
-    // https://localhost:8080/cart/products/15 (15 is the productId to be added
-    public void addToCart(@PathVariable int productId, Principal principal){
+
+    public ShoppingCart addToCart(@PathVariable int productId, Principal principal) {
         try {
+
             String username = principal.getName();
             User user = userDao.getByUserName(username);
             int userId = user.getId();
-            shoppingCartDao.addProduct(userId, productId, 1);
+
+            Product product = productDao.getById(productId);
+
+            if (product == null) {
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Product not found");
+            }
+
+            shoppingCartDao.addItem(userId, productId, 1);
+
+            return shoppingCartDao.getByUserId(userId);
+
+        } catch (ResponseStatusException exception) {
+            throw exception;
         } catch (Exception e) {
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "UNABLE TO ADD TO YOUR CART", e);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Sowwy! :C");
         }
     }
 
-    // add a PUT method to update an existing product in the cart - the url should be
+
+
     @PutMapping
-    // https://localhost:8080/cart/products/15 (15 is the productId to be updated)
-    // the BODY should be a ShoppingCartItem - quantity is the only value that will be updated
-    public void updateCartItem(@PathVariable int productId, @RequestBody ShoppingCartItem item, Principal principal) {
+    public ShoppingCart updateCartItem(@PathVariable int productId, @RequestBody ShoppingCartItem item, Principal principal) {
         try {
             String username = principal.getName();
             User user = userDao.getByUserName(username);
             int userId = user.getId();
+
             shoppingCartDao.updateQuantity(userId, productId, item.getQuantity());
+
+            return shoppingCartDao.getByUserId(userId);
+
         } catch (Exception e) {
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "UNABLE TO UPDATE THE CART", e);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Sowwy :C");
         }
     }
 
     // add a DELETE method to clear all products from the current users cart
     @DeleteMapping
-    // https://localhost:8080/cart
-    public void clearCart(Principal principal){
+    public ShoppingCart clearCart(Principal principal) {
         try {
-            String username = principal.getName();
-            User user = userDao.getByUserName(username);
+            String userName = principal.getName();
+            User user = userDao.getByUserName(userName);
             int userId = user.getId();
-            shoppingCartDao.clearShoppingCart(userId);
+
+            shoppingCartDao.delete(userId);
+
+            System.out.println("Be gone with this!");
+
+            return new ShoppingCart();
+
         } catch (Exception e) {
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "UNABLE TO CLEAR THE CART", e);
+            System.err.println("Error clearing cart: " + e.getMessage());
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Oops... our bad.");
         }
     }
 }

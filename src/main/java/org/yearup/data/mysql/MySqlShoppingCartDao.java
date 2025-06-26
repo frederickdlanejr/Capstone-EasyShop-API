@@ -1,5 +1,6 @@
 package org.yearup.data.mysql;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.yearup.data.ProductDao;
 import org.yearup.data.ShoppingCartDao;
@@ -16,8 +17,10 @@ import java.sql.SQLException;
 @Component
 public class MySqlShoppingCartDao extends MySqlDaoBase implements ShoppingCartDao {
 
-private ProductDao productDao;
-    public MySqlShoppingCartDao(DataSource dataSource) {
+    private ProductDao productDao;
+
+
+    public MySqlShoppingCartDao(DataSource dataSource, ProductDao productDao) {
         super(dataSource);
         this.productDao = productDao;
     }
@@ -27,16 +30,15 @@ private ProductDao productDao;
         ShoppingCart cart = new ShoppingCart();
 
         String query = """
-            SELECT product_id, quantity
-            FROM shopping_cart
-            WHERE user_id = ?
-            """;
+                SELECT product_id, quantity
+                FROM shopping_cart
+                WHERE user_id = ?
+                """;
 
-        try (Connection connection = getConnection()) {
-            PreparedStatement ps = connection.prepareStatement(query);
+        try (Connection connection = getConnection();
+             PreparedStatement ps = connection.prepareStatement(query)) {
 
             ps.setInt(1, userId);
-
             try (ResultSet results = ps.executeQuery()) {
                 while (results.next()) {
                     int productId = results.getInt("product_id");
@@ -53,12 +55,11 @@ private ProductDao productDao;
                 }
             }
         } catch (SQLException e) {
-            throw new RuntimeException("Error getting shopping cart for user " + userId, e);
+            throw new RuntimeException("Error retrieving shopping cart for user " + userId, e);
         }
 
         return cart;
     }
-
 
     @Override
     public void save(ShoppingCart cart) {
@@ -69,14 +70,65 @@ private ProductDao productDao;
     public void delete(int userId) {
 
     }
-
+//fix this later dummy
     @Override
     public void addItem(int userId, int productId, int quantity) {
+        String checkQuery = """
+                SELECT quantity
+                FROM shopping_cart
+                WHERE user_id = ? AND product_id = ?
+                """;
 
+        String updateQuery = """
+                UPDATE shopping_cart
+                SET quantity = ?
+                WHERE user_id = ? AND product_id = ?
+                """;
+
+        String insertQuery = """
+                INSERT INTO shopping_cart (quantity, user_id, product_id)
+                VALUES (?, ?, ?)
+                """;
+
+        try (Connection connection = getConnection();
+             PreparedStatement checkPs = connection.prepareStatement(checkQuery)) {
+
+            checkPs.setInt(1, userId);
+            checkPs.setInt(2, productId);
+
+            try (ResultSet rs = checkPs.executeQuery()) {
+                if (rs.next()) {
+                    // Item exists: update
+                    try (PreparedStatement updatePs = connection.prepareStatement(updateQuery)) {
+                        updatePs.setInt(1, quantity);
+                        updatePs.setInt(2, userId);
+                        updatePs.setInt(3, productId);
+                        updatePs.executeUpdate();
+                    }
+                } else {
+                    try (PreparedStatement insertPs = connection.prepareStatement(insertQuery)) {
+                        insertPs.setInt(1, userId);
+                        insertPs.setInt(2, productId);
+                        insertPs.setInt(3, quantity);
+                        insertPs.executeUpdate();
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException("Sowwy " + userId, e);
+        }
     }
 
     @Override
     public void updateItem(int userId, int productId, int quantity) {
+        if (quantity <= 0) {
+            removeItem(userId,productId);
+            return;
+        }
+
+        String query = "Update shopping_cart Set quantity =? WHERE user_id = ? AND product_id = ?";
+
+        try(Connection connection = getConnection();
 
     }
 
