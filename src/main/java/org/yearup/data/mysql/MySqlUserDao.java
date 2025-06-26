@@ -27,25 +27,34 @@ public class MySqlUserDao extends MySqlDaoBase implements UserDao
         String sql = "INSERT INTO users (username, hashed_password, role) VALUES (?, ?, ?)";
         String hashedPassword = new BCryptPasswordEncoder().encode(newUser.getPassword());
 
-        try (Connection connection = getConnection())
+        try (Connection connection = getConnection();
+             PreparedStatement ps = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS))
         {
-            PreparedStatement ps = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
+
             ps.setString(1, newUser.getUsername());
             ps.setString(2, hashedPassword);
             ps.setString(3, newUser.getRole());
 
-            ps.executeUpdate();
+            int rowsAffected = ps.executeUpdate();
+            if (rowsAffected > 0) {
+                try(ResultSet generatedKeys = ps.getGeneratedKeys()) {
+                    if (generatedKeys.next()) {
 
-            User user = getByUserName(newUser.getUsername());
-            user.setPassword("");
+                        int userId = generatedKeys.getInt(1);
+                        User user = getUserById(userId);
+                        user.setPassword("");
+                        return user;
 
-            return user;
-
+                    }
+                }
+            }
         }
         catch (SQLException e)
         {
-            throw new RuntimeException(e);
+            throw new RuntimeException("Failed to crease user: " + newUser.getUsername(), e);
         }
+
+        return null;
     }
 
     @Override
@@ -54,12 +63,10 @@ public class MySqlUserDao extends MySqlDaoBase implements UserDao
         List<User> users = new ArrayList<>();
 
         String sql = "SELECT * FROM users";
-        try (Connection connection = getConnection())
+        try (Connection connection = getConnection();
+             PreparedStatement statement = connection.prepareStatement(sql);
+             ResultSet row = statement.executeQuery())
         {
-            PreparedStatement statement = connection.prepareStatement(sql);
-
-            ResultSet row = statement.executeQuery();
-
             while (row.next())
             {
                 User user = mapRow(row);
@@ -78,18 +85,19 @@ public class MySqlUserDao extends MySqlDaoBase implements UserDao
     public User getUserById(int id)
     {
         String sql = "SELECT * FROM users WHERE user_id = ?";
-        try (Connection connection = getConnection())
+        try (Connection connection = getConnection();
+             PreparedStatement statement = connection.prepareStatement(sql))
         {
-            PreparedStatement statement = connection.prepareStatement(sql);
             statement.setInt(1, id);
 
-            ResultSet row = statement.executeQuery();
-
-            if(row.next())
-            {
-                User user = mapRow(row);
-                return user;
+            try(ResultSet row = statement.executeQuery()) {
+                if(row.next())
+                {
+                 return mapRow(row);
+                }
             }
+
+
         }
         catch (SQLException e)
         {
@@ -105,9 +113,9 @@ public class MySqlUserDao extends MySqlDaoBase implements UserDao
                 " FROM users " +
                 " WHERE username = ?";
 
-        try (Connection connection = getConnection())
+        try (Connection connection = getConnection();
+             PreparedStatement statement = connection.prepareStatement(sql))
         {
-            PreparedStatement statement = connection.prepareStatement(sql);
             statement.setString(1, username);
 
             ResultSet row = statement.executeQuery();
