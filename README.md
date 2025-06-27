@@ -1,29 +1,55 @@
-Capstone EasyShop API
-A Spring Boot–based REST API for an e-commerce platform that supports products catalog, shopping cart, order checkout, and integrates with a frontend website.
+# Capstone EasyShop API
 
-🚀 Features
-Products: View all products and details
+A full-featured e-commerce backend built with Spring Boot and MySQL. This API powers the EasyShop web application, handling products, categories, shopping carts, and order checkout functionality.
 
-Shopping Cart: Add items to a user’s cart, view current cart, and clear cart
+---
 
-Checkout: Submit cart as an order, storing orders and order_items in the database, then clear the cart
+## 🚀 Features
 
-🛠️ Setup & Installation
-Prerequisites
-Java 17+
+- 🛍️ Browse products and categories
+- 🛒 Add items to shopping cart
+- 🧾 View and clear cart
+- 📦 Submit orders via checkout
+- 🔐 Admin functionality to manage categories
+- 🧪 Tested with Postman
+- 🗄️ Persistent storage using MySQL
 
-Maven
+---
 
-MySQL database
+## 🧠 Challenges Faced
 
-A local copy of the Capstone-EasyShop-API backend
+![Screenshot 2025-06-27 092952](https://github.com/user-attachments/assets/3415a179-3bd7-4c0d-ab94-4085b4851f0a)
 
-Database
-Run this SQL (or import via migration tool):
 
-sql
-Copy
-Edit
+---
+
+### 🐛 Cart Not Updating
+
+Cart `POST` requests were failing because `userId` was missing.
+
+**Fix:** Updated frontend to include the required query parameter.
+
+```js
+// Before (broken)
+axios.post(`/cart/products/${productId}`);
+
+// After (working)
+axios.post(`/cart/products/${productId}?userId=1`);
+```
+
+---
+
+### ⚙️ MySQL Integration
+
+Custom schema was used for `shopping_cart`, `orders`, and `order_items`:
+
+```sql
+CREATE TABLE shopping_cart (
+    user_id INT,
+    product_id INT,
+    quantity INT
+);
+
 CREATE TABLE orders (
     id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL,
@@ -36,81 +62,83 @@ CREATE TABLE order_items (
     order_id INT NOT NULL,
     product_id INT NOT NULL,
     quantity INT NOT NULL,
-    price DECIMAL(10,2) NOT NULL,
-    FOREIGN KEY (order_id) REFERENCES orders(id)
+    price DECIMAL(10,2) NOT NULL
 );
-Ensure your existing tables include:
+```
 
-products
+---
 
-shopping_cart (columns: user_id, product_id, quantity)
+## 📚 Category Endpoints
 
-Configuration
-In application.properties:
+### 🔓 Public
 
-properties
-Copy
-Edit
-spring.datasource.url=jdbc:mysql://localhost:3306/easyshop
-spring.datasource.username=YOUR_DB_USER
-spring.datasource.password=YOUR_DB_PASSWORD
-Build & Run
-bash
-Copy
-Edit
-./mvnw clean package
-java -jar target/Capstone-EasyShop-API-0.0.1-SNAPSHOT.jar
-Backend will listen on http://localhost:8080.
+```http
+GET /categories
+```
+Returns a list of all product categories.
 
-📋 API Endpoints
-Products
-bash
-Copy
-Edit
-GET /api/products
-GET /api/products/{id}
-Shopping Cart
-bash
-Copy
-Edit
-POST /cart/products/{productId}?userId={userId}
-GET  /cart?userId={userId}
-DELETE /cart?userId={userId}
-Checkout
-bash
-Copy
-Edit
-POST /orders/checkout?userId={userId}
-Submits cart as an order, clears cart, and stores order + items in DB.
+---
 
-📁 Project Structure
-css
-Copy
-Edit
-src/
-├─ models/
-│   ├─ Product.java
-│   ├─ ShoppingCart.java
-│   ├─ ShoppingCartItem.java
-│   ├─ Order.java
-│   └─ OrderItem.java
-├─ data/
-│   ├─ ProductDao.java
-│   ├─ ShoppingCartDao.java
-│   ├─ OrderDao.java
-│   └─ mysql/
-│       ├─ MySqlProductDao.java
-│       ├─ MySqlShoppingCartDao.java
-│       └─ MySqlOrderDao.java
-└─ controllers/
-    ├─ ProductController.java
-    ├─ ShoppingCartController.java
-    └─ OrderController.java
-    
-📦 Intergration With Frontend
+### 🔐 Admin
 
+```http
+GET    /admin/categories
+POST   /admin/categories
+PUT    /admin/categories/{id}
+DELETE /admin/categories/{id}
+```
 
+These endpoints let admins create, update, or remove categories such as **Electronics**, **Books**, etc.
 
+---
 
-✉️ Need Help?
-Reach me at frederick.d.lane@example.com or open an issue on this repo.
+## 🛒 Shopping Cart Endpoints
+
+### ➕ Add Product to Cart
+
+```http
+POST /cart/products/{productId}?userId=1
+```
+
+### 📋 View Cart
+
+```http
+GET /cart?userId=1
+```
+
+### 🗑️ Clear Cart
+
+```http
+DELETE /cart?userId=1
+```
+
+### ✅ Checkout
+
+```http
+POST /orders/checkout?userId=1
+```
+
+Creates an order from the user's cart and clears the cart.
+
+---
+
+All endpoints return JSON responses and integrate easily with frontend apps.
+
+---
+
+## 🛠 Tech Stack
+
+- **Java 17**
+- **Spring Boot**
+- **MySQL**
+- **Maven**
+- **Postman**
+
+---
+
+## ✅ Next Steps
+
+- [ ] Add secure login with Spring Security or JWT
+- [ ] Replace query param `userId` with authenticated user detection
+- [ ] Allow users to view order history
+- [ ] Integrate Swagger/OpenAPI documentation for easier testing and documentation
