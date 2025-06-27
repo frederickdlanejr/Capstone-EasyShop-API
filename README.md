@@ -9,7 +9,6 @@ A full-featured e-commerce backend built with Spring Boot and MySQL. This API po
 - 🛍️ Browse products and categories
 - 🛒 Add items to shopping cart
 - 🧾 View and clear cart
-- 📦 Submit orders via checkout
 - 🔐 Admin functionality to manage categories
 - 🧪 Tested with Postman
 - 🗄️ Persistent storage using MySQL
